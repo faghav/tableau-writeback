@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://cdn.jsdelivr.net/gh/tableau/extensions-api-lib@master/lib/tableau.extensions.1.latest.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 10px; background: #f4f4f4; }
+        textarea { width: 100%; height: 60px; margin-bottom: 10px; }
+        button { background: #00447b; color: white; border: none; padding: 8px 15px; cursor: pointer; }
+        #status { color: green; font-size: 12px; margin-top: 5px; }
+    </style>
+</head>
+<body>
+    <strong>Commenting on:</strong> <span id="targetID">Select a row</span>
+    <textarea id="commentBox" placeholder="Enter comment..."></textarea>
+    <button id="submitBtn">Submit</button>
+    <div id="status"></div>
+
+    <script>
+        let selectedID = null;
+        let currentUser = "";
+
+        tableau.extensions.initializeAsync().then(() => {
+            // Get current user email
+            tableau.extensions.dashboardContent.dashboard.getUserAsync().then(u => {
+                currentUser = u.email || "unknown_user";
+            });
+
+            // Listen for clicks in the Balance Sheet
+            const worksheet = tableau.extensions.dashboardContent.dashboard.worksheets.find(w => w.name === 'B_S Final - vDec26');
+            worksheet.addEventListener(tableau.TableauEventType.MarkSelectionChanged, (event) => {
+                event.getMarksAsync().then(marks => {
+                    if (marks.data[0]) {
+                        // Assuming Transaction Type or ID is in your view
+                        selectedID = marks.data[0].data[0][0].formattedValue;
+                        document.getElementById('targetID').innerText = selectedID;
+                    }
+                });
+            });
+        });
+
+        document.getElementById('submitBtn').onclick = () => {
+            const comment = document.getElementById('commentBox').value;
+            fetch('https://script.google.com/macros/s/AKfycbwihtQNieeLAPiQ9ywWYSzyGPjvpbv5NQQEc45Lb49MbwIQTqgXQzKAQPVKTlEFKLIv/exec', {
+                method: 'POST',
+                body: JSON.stringify({ id: selectedID, user: currentUser, comment: comment })
+            }).then(() => {
+                document.getElementById('status').innerText = "Saved!";
+                document.getElementById('commentBox').value = "";
+            });
+        };
+    </script>
+</body>
+</html>
